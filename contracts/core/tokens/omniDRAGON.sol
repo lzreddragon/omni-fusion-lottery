@@ -12,6 +12,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 // Dragon ecosystem interfaces
 import {IOmniDragonLotteryManager} from "../../interfaces/lottery/IOmniDragonLotteryManager.sol";
 import {IOmniDragonRegistry} from "../../interfaces/config/IOmniDragonRegistry.sol";
+import {IOmniDragonPriceOracle} from "../../interfaces/oracles/IOmniDragonPriceOracle.sol";
 import {DragonErrors} from "../../libraries/DragonErrors.sol";
 import {LayerZeroOptionsHelper} from "../../libraries/LayerZeroOptionsHelper.sol";
 
@@ -578,6 +579,76 @@ contract omniDRAGON is OFT, ReentrancyGuard {
     amountSentLD = _amountLD;
     amountReceivedLD = _amountLD;
   }
+
+  // ========== ORACLE INTEGRATION ==========
+
+  /**
+   * @notice Get current DRAGON token price from registry oracle
+   * @return price Price in USD (18 decimals) 
+   * @return isValid Whether the price is valid
+   * @return timestamp Price update timestamp
+   */
+  function getDragonPriceUSD() external view returns (int256 price, bool isValid, uint256 timestamp) {
+    address oracle = REGISTRY.getPriceOracle(uint16(block.chainid));
+    if (oracle == address(0)) {
+      return (0, false, 0);
+    }
+    
+    try IOmniDragonPriceOracle(oracle).getAggregatedPrice() returns (
+      int256 _price, 
+      bool _success, 
+      uint256 _timestamp
+    ) {
+      return (_price, _success, _timestamp);
+    } catch {
+      return (0, false, 0);
+    }
+  }
+
+  /**
+   * @notice Calculate USD value of DRAGON amount for external integrations
+   * @param _amount Amount of DRAGON tokens (18 decimals)
+   * @return usdValue USD value (6 decimals)
+   */
+  function calculateUSDValue(uint256 _amount) external view returns (uint256 usdValue) {
+    if (_amount == 0) return 0;
+    
+    (int256 price, bool isValid,) = this.getDragonPriceUSD();
+    if (!isValid || price <= 0) return 0;
+    
+    // Convert: DRAGON (18 decimals) * Price (18 decimals) / 1e30 = USD (6 decimals)
+    return (_amount * uint256(price)) / 1e30;
+  }
+
+  /**
+   * @notice Calculate USD value of fee for external integrations
+   * @param _amount Amount involved in transaction
+   * @param _isBuy Whether this is a buy transaction
+   * @return usdValue USD value of the fee (6 decimals)
+   */
+  function calculateFeeInUSD(uint256 _amount, bool _isBuy) external view returns (uint256 usdValue) {
+    if (_amount == 0) return 0;
+    
+    (int256 price, bool isValid,) = this.getDragonPriceUSD();
+    if (!isValid || price <= 0) return 0;
+    
+    Fees memory fees = _isBuy ? buyFees : sellFees;
+    uint256 feeAmount = (_amount * fees.total) / BASIS_POINTS;
+    
+    // Convert fee amount to USD (6 decimals)
+    return (feeAmount * uint256(price)) / 1e30;
+  }
+
+  /**
+   * @notice Get oracle address for current chain
+   * @return oracle The oracle address
+   */
+  function getPriceOracle() external view returns (address oracle) {
+    return REGISTRY.getPriceOracle(uint16(block.chainid));
+  }
+
+  // Oracle events
+  event PriceQueried(int256 price, bool isValid, uint256 timestamp);
 
   // ========== RECEIVE FUNCTION ==========
 

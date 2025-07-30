@@ -156,6 +156,9 @@ contract OmniDragonLotteryManager is Ownable, ReentrancyGuard {
 
   InstantLotteryConfig public instantLotteryConfig;
 
+  // Oracle integration
+  IERC20 public dragonToken;
+
   // ============ EVENTS ============
 
   event InstantLotteryProcessed(address indexed user, uint256 swapAmount, bool won, uint256 reward);
@@ -807,5 +810,153 @@ contract OmniDragonLotteryManager is Ownable, ReentrancyGuard {
    */
   function getTotalUnclaimedPrizes() external pure returns (uint256 total) {
     return 0;
+  }
+
+  // ============ ORACLE INTEGRATION ============
+
+  /**
+   * @notice Set the DRAGON token address for price conversions
+   * @param _dragonToken Address of the DRAGON token
+   */
+  function setDragonToken(address _dragonToken) external onlyOwner {
+    require(_dragonToken != address(0), "Invalid dragon token");
+    dragonToken = IERC20(_dragonToken);
+  }
+
+  /**
+   * @notice Get current DRAGON price from oracle
+   * @return price Price in USD (18 decimals)
+   * @return isValid Whether the price is valid
+   */
+  function _getDragonPriceUSD() internal view returns (int256 price, bool isValid) {
+    if (address(priceOracle) == address(0)) return (0, false);
+    
+    try priceOracle.getAggregatedPrice() returns (
+      int256 _price, 
+      bool _success, 
+      uint256 /* timestamp */
+    ) {
+      return (_price, _success);
+    } catch {
+      return (0, false);
+    }
+  }
+
+  /**
+   * @notice Convert DRAGON amount to USD (6 decimals)
+   * @param dragonAmount Amount of DRAGON tokens (18 decimals)
+   * @return usdAmount USD amount (6 decimals)
+   */
+  function _convertDragonToUSD(uint256 dragonAmount) internal view returns (uint256 usdAmount) {
+    if (dragonAmount == 0) return 0;
+    
+    (int256 price, bool isValid) = _getDragonPriceUSD();
+    if (!isValid || price <= 0) return 0;
+    
+    // Convert: DRAGON (18 decimals) * Price (18 decimals) / 1e30 = USD (6 decimals)
+    return (dragonAmount * uint256(price)) / 1e30;
+  }
+
+  /**
+   * @notice Process lottery entry with DRAGON amount (called by omniDRAGON token)
+   * @param user User address
+   * @param dragonAmount Amount of DRAGON tokens involved in swap
+   */
+  function processEntryWithDragon(address user, uint256 dragonAmount) external nonReentrant rateLimited(user) {
+    require(msg.sender == address(dragonToken), "Only DRAGON token");
+    require(user != address(0), "Invalid user");
+    require(instantLotteryConfig.isActive, "Instant lottery not active");
+    
+    // Convert DRAGON amount to USD
+    uint256 usdAmount = _convertDragonToUSD(dragonAmount);
+    
+    // Check minimum USD threshold
+    if (usdAmount < MIN_SWAP_USD) {
+      return; // Below minimum threshold, no lottery entry
+    }
+    
+    // Calculate win probability based on USD amount
+    (, uint256 winProbability) = this.calculateWinProbability(user, usdAmount);
+    
+    // Process the lottery entry with USD amount
+    _processInstantLottery(user, usdAmount, winProbability);
+    
+    // Update user statistics
+    userStats[user].totalSwaps++;
+    userStats[user].totalVolume += usdAmount;
+    userStats[user].lastSwapTimestamp = block.timestamp;
+    
+    totalLotteryEntries++;
+  }
+
+  /**
+   * @notice Get current DRAGON price in USD for external queries
+   * @return price Price in USD (18 decimals)
+   * @return isValid Whether the price is valid
+   * @return timestamp Last update timestamp
+   */
+  function getDragonPriceUSD() external view returns (int256 price, bool isValid, uint256 timestamp) {
+    if (address(priceOracle) == address(0)) return (0, false, 0);
+    return priceOracle.getAggregatedPrice();
+  }
+
+  /**
+   * @notice Convert DRAGON amount to USD for external queries
+   * @param dragonAmount Amount of DRAGON tokens (18 decimals)
+   * @return usdAmount USD amount (6 decimals)
+   */
+  function convertDragonToUSD(uint256 dragonAmount) external view returns (uint256 usdAmount) {
+    return _convertDragonToUSD(dragonAmount);
+  }
+
+  /**
+   * @notice Internal function to process instant lottery entry
+   * @param user User address
+   * @param usdAmount USD amount of the swap
+   * @param winProbability Win probability in PPM
+   */
+  function _processInstantLottery(address user, uint256 usdAmount, uint256 winProbability) internal {
+    // Generate randomness for instant lottery
+    uint256 randomness = uint256(keccak256(abi.encodePacked(
+      block.timestamp,
+      block.prevrandao,
+      user,
+      usdAmount,
+      totalLotteryEntries
+    )));
+    
+    uint256 randomnessId = totalLotteryEntries + 1;
+    
+    // Emit lottery entry event
+    emit InstantLotteryEntered(
+      user,
+      usdAmount,
+      winProbability,
+      winProbability, // boostedWinChancePPM (same as winProbability for now)
+      randomnessId
+    );
+    
+    // Determine if user won (randomness % 1000000 vs winProbability PPM)
+    bool won = (randomness % 1000000) < winProbability;
+    uint256 reward = 0;
+    
+    if (won && address(jackpotDistributor) != address(0)) {
+      // Calculate reward (percentage of jackpot)
+      uint256 currentJackpot = jackpotDistributor.getCurrentJackpot();
+      reward = (currentJackpot * instantLotteryConfig.rewardPercentage) / 10000; // 69% of jackpot
+      
+      // Trigger jackpot distribution to winner
+      try jackpotDistributor.distributeJackpot(user, reward) {
+        totalPrizesWon++;
+        totalPrizesDistributed += reward;
+      } catch {
+        // If distribution fails, just mark as no win
+        won = false;
+        reward = 0;
+      }
+    }
+    
+    // Emit processing result event
+    emit InstantLotteryProcessed(user, usdAmount, won, reward);
   }
 }

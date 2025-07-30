@@ -3,12 +3,7 @@ pragma solidity ^0.8.20;
 
 /**
  * @title IOmniDragonRegistry
- * @dev Interface for OmniDragon registry with simplified configuration
- *
- * UPDATED FOR SIMPLIFIED ARCHITECTURE:
- * - Focused on essential LayerZero configuration
- * - Removed complex ecosystem integration functions
- * - Streamlined for DVN configuration and cross-chain setup
+ * @dev Interface for OmniDragon registry with oracle management
  */
 interface IOmniDragonRegistry {
   /**
@@ -24,10 +19,25 @@ interface IOmniDragonRegistry {
     bool isActive; // Whether this chain is active
   }
 
+  /**
+   * @dev Oracle configuration struct
+   */
+  struct OracleConfig {
+    address primaryOracle;      // Primary oracle address (Sonic chain)
+    uint32 primaryChainEid;    // Primary chain EID
+    uint32 lzReadChannelId;    // lzRead channel ID
+    bool isConfigured;         // Whether oracle is configured
+  }
+
   // Events
   event ChainRegistered(uint16 indexed chainId, string chainName);
   event ChainUpdated(uint16 indexed chainId);
   event ChainStatusChanged(uint16 indexed chainId, bool isActive);
+  
+  // Oracle events
+  event PriceOracleSet(uint16 indexed chainId, address indexed oracle);
+  event PrimaryOracleConfigured(address indexed primaryOracle, uint32 chainEid);
+  event LzReadChannelConfigured(uint16 indexed chainId, uint32 channelId);
 
   /**
    * @notice Register a new chain configuration
@@ -130,4 +140,41 @@ interface IOmniDragonRegistry {
    * @return The LayerZero endpoint address
    */
   function getLayerZeroEndpoint(uint16 _chainId) external view returns (address);
+
+  // ============ ORACLE MANAGEMENT ============
+
+  /**
+   * @notice Set price oracle for a specific chain
+   * @param _chainId Chain ID
+   * @param _oracle Oracle address
+   */
+  function setPriceOracle(uint16 _chainId, address _oracle) external;
+
+  /**
+   * @notice Get price oracle for a specific chain
+   * @param _chainId Chain ID
+   * @return Oracle address
+   */
+  function getPriceOracle(uint16 _chainId) external view returns (address);
+
+  /**
+   * @notice Configure primary oracle (on Sonic chain)
+   * @param _primaryOracle Primary oracle address
+   * @param _chainEid Primary chain EID
+   */
+  function configurePrimaryOracle(address _primaryOracle, uint32 _chainEid) external;
+
+  /**
+   * @notice Set lzRead channel for a chain
+   * @param _chainId Chain ID
+   * @param _channelId lzRead channel ID
+   */
+  function setLzReadChannel(uint16 _chainId, uint32 _channelId) external;
+
+  /**
+   * @notice Get oracle configuration for a chain
+   * @param _chainId Chain ID
+   * @return Oracle configuration
+   */
+  function getOracleConfig(uint16 _chainId) external view returns (OracleConfig memory);
 } 

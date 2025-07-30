@@ -300,7 +300,7 @@ contract OmniDragonPriceOracle is Ownable, Pausable, ReentrancyGuard {
   /**
    * @dev Update price from all configured oracles
    */
-  function updatePrice() public nonReentrant returns (bool success) {
+  function updatePrice() public virtual nonReentrant returns (bool success) {
     if (emergencyMode) revert EmergencyModeActive();
     if (circuitBreakerActive) return false;
 

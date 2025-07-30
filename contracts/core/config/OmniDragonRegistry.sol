@@ -536,4 +536,78 @@ contract OmniDragonRegistry is IOmniDragonRegistry, Ownable {
       }
     }
   }
+
+  // ============ ORACLE MANAGEMENT ============
+
+  // Oracle configuration storage
+  mapping(uint16 => address) public priceOracles; // chainId => oracle address
+  mapping(uint16 => IOmniDragonRegistry.OracleConfig) public oracleConfigs;
+
+  // Primary oracle configuration
+  address public primaryOracle;
+  uint32 public primaryChainEid;
+
+  // Events for oracle management are already defined in the interface
+
+  /**
+   * @notice Set price oracle for a specific chain
+   * @param _chainId Chain ID
+   * @param _oracle Oracle address
+   */
+  function setPriceOracle(uint16 _chainId, address _oracle) external onlyOwner {
+    require(_oracle != address(0), "Invalid oracle address");
+    
+    priceOracles[_chainId] = _oracle;
+    oracleConfigs[_chainId].isConfigured = true;
+    
+    emit PriceOracleSet(_chainId, _oracle);
+  }
+
+  /**
+   * @notice Get price oracle for a specific chain
+   * @param _chainId Chain ID
+   * @return Oracle address
+   */
+  function getPriceOracle(uint16 _chainId) external view returns (address) {
+    return priceOracles[_chainId];
+  }
+
+  /**
+   * @notice Configure primary oracle (on Sonic chain)
+   * @param _primaryOracle Primary oracle address
+   * @param _chainEid Primary chain EID
+   */
+  function configurePrimaryOracle(address _primaryOracle, uint32 _chainEid) external onlyOwner {
+    require(_primaryOracle != address(0), "Invalid oracle address");
+    
+    primaryOracle = _primaryOracle;
+    primaryChainEid = _chainEid;
+    
+    // Set as oracle for Sonic chain (146)
+    priceOracles[146] = _primaryOracle;
+    oracleConfigs[146].primaryOracle = _primaryOracle;
+    oracleConfigs[146].primaryChainEid = _chainEid;
+    oracleConfigs[146].isConfigured = true;
+    
+    emit PrimaryOracleConfigured(_primaryOracle, _chainEid);
+  }
+
+  /**
+   * @notice Set lzRead channel for a chain
+   * @param _chainId Chain ID
+   * @param _channelId lzRead channel ID
+   */
+  function setLzReadChannel(uint16 _chainId, uint32 _channelId) external onlyOwner {
+    oracleConfigs[_chainId].lzReadChannelId = _channelId;
+    emit LzReadChannelConfigured(_chainId, _channelId);
+  }
+
+  /**
+   * @notice Get oracle configuration for a chain
+   * @param _chainId Chain ID
+   * @return Oracle configuration
+   */
+  function getOracleConfig(uint16 _chainId) external view returns (IOmniDragonRegistry.OracleConfig memory) {
+    return oracleConfigs[_chainId];
+  }
 } 
