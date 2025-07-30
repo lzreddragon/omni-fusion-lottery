@@ -1,7 +1,7 @@
 {
-  "name": "red-dragon-ethglobal",
+  "name": "omni-fusion-lottery",
   "version": "1.0.0",
-  "description": "State Channels Exchange Hub with lottery-powered incentives",
+  "description": "Omni-chain lottery-powered exchange using 1inch Fusion+ and LayerZero",
   "main": "index.js",
   "scripts": {
     "compile": "hardhat compile",

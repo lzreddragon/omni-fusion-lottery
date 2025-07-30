@@ -1,6 +1,5 @@
 # Environment and sensitive files
 .env
-
 README.md
 
 # Build artifacts
