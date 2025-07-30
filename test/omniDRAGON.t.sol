@@ -193,11 +193,13 @@ contract omniDRAGONTest is Test {
         // Setup
         vm.startPrank(owner);
         dragon.setVaults(jackpotVault, revenueVault);
-        dragon.setPair(pair1, true);
         dragon.setTradingEnabled(true);
         
-        // Transfer tokens to pair first
+        // Transfer tokens to pair first (before marking as pair to avoid sell fees)
         dragon.transfer(pair1, TEST_AMOUNT);
+        
+        // Now mark as pair after tokens are already there
+        dragon.setPair(pair1, true);
         vm.stopPrank();
         
         // Simulate buy (transfer from pair to user)
@@ -250,12 +252,14 @@ contract omniDRAGONTest is Test {
     function testTransferWhenTradingDisabled() public {
         // Setup pair but don't enable trading
         vm.startPrank(owner);
-        dragon.setPair(pair1, true);
+        // Transfer tokens to pair first (before marking as pair)
         dragon.transfer(pair1, TEST_AMOUNT);
+        // Now mark as pair after tokens are already there
+        dragon.setPair(pair1, true);
         vm.stopPrank();
         
-        // Should revert when trying to trade through pair
-        vm.expectRevert();
+        // Should revert with TradingDisabled when trying to trade through pair
+        vm.expectRevert(abi.encodeWithSignature("TradingDisabled()"));
         vm.prank(pair1);
         dragon.transfer(user1, 100 * 10 ** 18);
     }
@@ -499,12 +503,16 @@ contract omniDRAGONTest is Test {
     
     function testMultiplePairs() public {
         vm.startPrank(owner);
-        dragon.setPair(pair1, true);
-        dragon.setPair(pair2, true);
         dragon.setVaults(jackpotVault, revenueVault);
         dragon.setTradingEnabled(true);
+        
+        // Transfer tokens to pairs first (before marking as pairs to avoid sell fees)
         dragon.transfer(pair1, TEST_AMOUNT);
         dragon.transfer(pair2, TEST_AMOUNT);
+        
+        // Now mark as pairs after tokens are already there
+        dragon.setPair(pair1, true);
+        dragon.setPair(pair2, true);
         vm.stopPrank();
         
         // Both pairs should trigger fees
