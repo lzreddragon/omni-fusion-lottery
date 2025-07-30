@@ -78,38 +78,32 @@ interface IOmniDRAGON is IERC20 {
     event EmergencyModeToggled(bool enabled);
     
     // View functions
-    function getBuyFees() external view returns (Fees memory);
-    function getSellFees() external view returns (Fees memory);
+    function getFees() external view returns (Fees memory buyFees_, Fees memory sellFees_);
     function getControlFlags() external view returns (ControlFlags memory);
+    function getDistributionAddresses() external view returns (address jackpot, address revenue);
     function jackpotVault() external view returns (address);
-    function revenueVault() external view returns (address);
+    function revenueDistributor() external view returns (address);
     function lotteryManager() external view returns (address);
     function registry() external view returns (address);
     function isPair(address account) external view returns (bool);
-    function calculateFees(uint256 amount, bool isBuy) external view returns (uint256 jackpotFee, uint256 revenueFee, uint256 burnFee);
+    function isExcludedFromFees(address account) external view returns (bool);
+    function isExcludedFromMaxTransfer(address account) external view returns (bool);
     
     // Admin functions
-    function setFees(Fees calldata buyFees, Fees calldata sellFees) external;
-    function setVaults(address _jackpotVault, address _revenueVault) external;
+    function updateVaults(address _jackpotVault, address _revenueDistributor) external;
+    function setPair(address pair, bool isActive) external;
+    function setExcludeFromFees(address account, bool excluded) external;
+    function setExcludeFromMaxTransfer(address account, bool excluded) external;
+    function updateFees(bool isBuy, uint16 _jackpot, uint16 _veDRAGON, uint16 _burn) external;
     function setLotteryManager(address _lotteryManager) external;
-    function setPair(address pair, bool listed) external;
-    function setTradingEnabled(bool enabled) external;
-    function setFeesEnabled(bool enabled) external;
+    function toggleTrading() external;
+    function toggleFees() external;
+    function togglePause() external;
     function toggleEmergencyMode() external;
-    function emergencyWithdraw(address token, uint256 amount) external;
+    function emergencyWithdrawNative(uint256 amount) external;
+    function emergencyWithdrawToken(address token, uint256 amount) external;
     
-    // Cross-chain functions
-    function crossChainTransfer(
-        uint32 dstEid,
-        address to,
-        uint256 amount,
-        bytes calldata extraOptions
-    ) external payable returns (bytes32 guid);
-    
-    function quoteCrossChainTransfer(
-        uint32 dstEid,
-        address to,
-        uint256 amount,
-        bytes calldata extraOptions
-    ) external view returns (uint256 fee);
+    // Additional functions
+    function registerMe() external;
+    function supportsInterface(bytes4 interfaceId) external view returns (bool);
 }
