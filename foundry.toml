@@ -24,6 +24,8 @@ remappings = [
     "@chainlink/=lib/chainlink/",
     "@layerzerolabs/oft-evm/=lib/LayerZero-v2/packages/layerzero-v2/evm/oapp/",
     "@layerzerolabs/lz-evm-protocol-v2/=lib/LayerZero-v2/packages/layerzero-v2/evm/protocol/",
+    "@layerzerolabs/lz-evm-messagelib-v2/=lib/LayerZero-v2/packages/layerzero-v2/evm/messagelib/",
+    "solidity-bytes-utils/=lib/solidity-bytes-utils/",
     "forge-std/=lib/forge-std/src/",
 ]
 
