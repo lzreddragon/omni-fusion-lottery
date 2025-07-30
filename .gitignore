@@ -1,6 +1,6 @@
 # Environment and sensitive files
 .env
-README.md
+.cursor/rules/rules.mdc
 
 # Build artifacts
 out/
