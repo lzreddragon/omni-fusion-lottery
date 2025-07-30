@@ -13,6 +13,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {IOmniDragonLotteryManager} from "../../interfaces/lottery/IOmniDragonLotteryManager.sol";
 import {IOmniDragonRegistry} from "../../interfaces/config/IOmniDragonRegistry.sol";
 import {DragonErrors} from "../../libraries/DragonErrors.sol";
+import {LayerZeroOptionsHelper} from "../../libraries/LayerZeroOptionsHelper.sol";
 
 // Event Categories for gas optimization
 enum EventCategory {
@@ -529,6 +530,7 @@ contract omniDRAGON is OFT, ReentrancyGuard {
   /**
    * @notice Registers the contract with Sonic FeeM system
    * @dev Only callable by owner. Makes external call to FeeM contract.
+   * @dev Consider using DragonFeeMHelper for advanced FeeM integration
    */
   function registerMe() external onlyOwner {
     (bool _success, ) = address(0xDC2B0D2Dd2b7759D97D50db4eabDC36973110830).call(
@@ -552,6 +554,10 @@ contract omniDRAGON is OFT, ReentrancyGuard {
   ) public view override returns (MessagingFee memory msgFee) {
     (, uint256 amountReceivedLD) = _debitView(_sendParam.amountLD, _sendParam.minAmountLD, _sendParam.dstEid);
     (bytes memory message, bytes memory options) = _buildMsgAndOptions(_sendParam, amountReceivedLD);
+    
+    // Ensure extraOptions are properly formatted to avoid LZ_ULN_InvalidWorkerOptions
+    options = LayerZeroOptionsHelper.ensureValidOptions(options);
+    
     return _quote(_sendParam.dstEid, message, options, _payInLzToken);
   }
 

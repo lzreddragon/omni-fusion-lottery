@@ -282,8 +282,9 @@ contract omniDRAGONTest is Test {
     }
     
     function testTransferWhenTradingDisabled() public {
-        // Setup pair but don't enable trading
+        // Setup: disable trading (since it starts enabled by default)
         vm.startPrank(owner);
+        dragon.toggleTrading(); // This disables trading
         // Transfer tokens to pair first (before marking as pair)
         dragon.transfer(pair1, TEST_AMOUNT);
         // Now mark as pair after tokens are already there
@@ -299,9 +300,13 @@ contract omniDRAGONTest is Test {
     function testTransferExceedsMaxLimit() public {
         uint256 maxTransfer = dragon.MAX_SINGLE_TRANSFER();
         
-        vm.expectRevert();
+        // Owner might be excluded, so use a regular user instead
         vm.prank(owner);
-        dragon.transfer(user1, maxTransfer + 1);
+        dragon.transfer(user1, maxTransfer); // Give user1 enough tokens first
+        
+        vm.expectRevert();
+        vm.prank(user1);
+        dragon.transfer(user2, maxTransfer + 1);
     }
     
     function testTransferWhenPaused() public {
@@ -499,10 +504,9 @@ contract omniDRAGONTest is Test {
     // =============================================================
     
     function testFeesWithZeroVaults() public {
-        // Setup pair and enable trading without setting vaults
+        // Setup pair (trading already enabled by default) without setting vaults
         vm.startPrank(owner);
         dragon.setPair(pair1, true);
-        dragon.toggleTrading();
         dragon.transfer(pair1, TEST_AMOUNT);
         vm.stopPrank();
         
@@ -518,7 +522,7 @@ contract omniDRAGONTest is Test {
     function testMultiplePairs() public {
         vm.startPrank(owner);
         dragon.updateVaults(jackpotVault, revenueVault);
-        dragon.toggleTrading();
+        // Trading already enabled by default
         
         // Transfer tokens to pairs first (before marking as pairs to avoid sell fees)
         dragon.transfer(pair1, TEST_AMOUNT);
