@@ -36,12 +36,17 @@ contract omniDRAGONTest is Test {
     
     // Events to test
     event FeesUpdated(omniDRAGON.Fees newFees);
-    event VaultUpdated(address indexed vault, string vaultType);
-    event TradingEnabled(bool enabled);
-    event FeesEnabled(bool enabled);
-    event PairUpdated(address indexed pair, bool isListed);
-    event LotteryManagerUpdated(address indexed newManager);
-    event FeeDistributed(address indexed vault, uint256 amount, string category);
+    event VaultsUpdated(address indexed jackpotVault, address indexed revenueDistributor);
+    event TradingToggled(bool indexed enabled);
+    event FeesToggled(bool indexed enabled);
+    event PairUpdated(address indexed pair, bool indexed isActive);
+    event LotteryManagerUpdated(address indexed oldManager, address indexed newManager);
+    event ImmediateDistributionExecuted(
+        address indexed recipient,
+        uint256 amount,
+        EventCategory indexed distributionType
+    );
+    event TokensBurned(uint256 amount, EventCategory indexed burnType);
     
     function setUp() public {
         // Set up test accounts
@@ -182,13 +187,14 @@ contract omniDRAGONTest is Test {
         // Test with small amount
         uint256 amount = 100;
         uint256 totalFee = (amount * buyFees.total) / dragon.BASIS_POINTS();
-        uint256 jackpotFee = (totalFee * buyFees.jackpot) / buyFees.total;
-        uint256 revenueFee = (totalFee * buyFees.veDRAGON) / buyFees.total;
-        uint256 burnFee = totalFee - jackpotFee - revenueFee;
+        uint256 jackpotFee = (amount * buyFees.jackpot) / dragon.BASIS_POINTS();
+        uint256 revenueFee = (amount * buyFees.veDRAGON) / dragon.BASIS_POINTS();
+        uint256 burnFee = (amount * buyFees.burn) / dragon.BASIS_POINTS();
         
-        assertEq(jackpotFee, 6);   // 6.9% of 100 total fee (10)
-        assertEq(revenueFee, 2);   // 2.41% of 100 total fee (10)
-        assertEq(burnFee, 0);      // 0.69% of 100 total fee (10) - rounds down
+        assertEq(totalFee, 10);    // 10% of 100 = 10
+        assertEq(jackpotFee, 6);   // 6.9% of 100 = 6.9 -> truncated to 6  
+        assertEq(revenueFee, 2);   // 2.41% of 100 = 2.41 -> truncated to 2
+        assertEq(burnFee, 0);      // 0.69% of 100 = 0.69 -> truncated to 0
         
         // Test with zero amount
         amount = 0;
@@ -222,10 +228,9 @@ contract omniDRAGONTest is Test {
     }
     
     function testBuyTransferWithFees() public {
-        // Setup
+        // Setup (trading is enabled by default)
         vm.startPrank(owner);
         dragon.updateVaults(jackpotVault, revenueVault);
-        dragon.toggleTrading();
         
         // Transfer tokens to pair first (before marking as pair to avoid sell fees)
         dragon.transfer(pair1, TEST_AMOUNT);
@@ -238,13 +243,13 @@ contract omniDRAGONTest is Test {
         uint256 buyAmount = 100 * 10 ** 18;
         
         vm.expectEmit(true, false, false, true);
-        emit FeeDistributed(jackpotVault, 6.9 * 10 ** 18, "BUY_JACKPOT");
+        emit ImmediateDistributionExecuted(jackpotVault, 6.9 * 10 ** 18, EventCategory.BUY_JACKPOT);
         
         vm.expectEmit(true, false, false, true);
-        emit FeeDistributed(revenueVault, 2.41 * 10 ** 18, "BUY_REVENUE");
+        emit ImmediateDistributionExecuted(revenueVault, 2.41 * 10 ** 18, EventCategory.BUY_REVENUE);
         
         vm.expectEmit(true, false, false, true);
-        emit FeeDistributed(dragon.DEAD_ADDRESS(), 0.69 * 10 ** 18, "BUY_BURN");
+        emit TokensBurned(0.69 * 10 ** 18, EventCategory.BUY_BURN);
         
         vm.prank(pair1);
         dragon.transfer(user1, buyAmount);
@@ -258,11 +263,10 @@ contract omniDRAGONTest is Test {
     }
     
     function testSellTransferWithFees() public {
-        // Setup
+        // Setup (trading is enabled by default)
         vm.startPrank(owner);
         dragon.updateVaults(jackpotVault, revenueVault);
         dragon.setPair(pair1, true);
-        dragon.toggleTrading();
         dragon.transfer(user1, TEST_AMOUNT);
         vm.stopPrank();
         
@@ -270,7 +274,7 @@ contract omniDRAGONTest is Test {
         uint256 sellAmount = 100 * 10 ** 18;
         
         vm.expectEmit(true, false, false, true);
-        emit FeeDistributed(jackpotVault, 6.9 * 10 ** 18, "SELL_JACKPOT");
+        emit ImmediateDistributionExecuted(jackpotVault, 6.9 * 10 ** 18, EventCategory.SELL_JACKPOT);
         
         vm.prank(user1);
         dragon.transfer(pair1, sellAmount);
@@ -364,10 +368,7 @@ contract omniDRAGONTest is Test {
     
     function testSetVaults() public {
         vm.expectEmit(true, false, false, true);
-        emit VaultUpdated(jackpotVault, "JACKPOT");
-        
-        vm.expectEmit(true, false, false, true);
-        emit VaultUpdated(revenueVault, "REVENUE");
+        emit VaultsUpdated(jackpotVault, revenueVault);
         
         vm.prank(owner);
         dragon.updateVaults(jackpotVault, revenueVault);
@@ -390,7 +391,7 @@ contract omniDRAGONTest is Test {
     
     function testSetLotteryManager() public {
         vm.expectEmit(true, false, false, false);
-        emit LotteryManagerUpdated(lotteryManager);
+        emit LotteryManagerUpdated(address(0), lotteryManager);
         
         vm.prank(owner);
         dragon.setLotteryManager(lotteryManager);
@@ -419,18 +420,18 @@ contract omniDRAGONTest is Test {
     
     function testSetTradingEnabled() public {
         vm.expectEmit(false, false, false, true);
-        emit TradingEnabled(true);
+        emit TradingToggled(false);
         
         vm.prank(owner);
         dragon.toggleTrading();
         
         omniDRAGON.ControlFlags memory flags = dragon.getControlFlags();
-        assertTrue(flags.tradingEnabled);
+        assertFalse(flags.tradingEnabled);
     }
     
     function testSetFeesEnabled() public {
         vm.expectEmit(false, false, false, true);
-        emit FeesEnabled(false);
+        emit FeesToggled(false);
         
         vm.prank(owner);
         dragon.toggleFees();
@@ -567,18 +568,21 @@ contract omniDRAGONTest is Test {
         
         (omniDRAGON.Fees memory buyFees, ) = dragon.getFees();
         
-        // Calculate fees manually
+        // Calculate fees manually (correctly)
         uint256 totalFee = (amount * buyFees.total) / dragon.BASIS_POINTS();
-        uint256 jackpotFee = (totalFee * buyFees.jackpot) / buyFees.total;
-        uint256 revenueFee = (totalFee * buyFees.veDRAGON) / buyFees.total;
-        uint256 burnFee = totalFee - jackpotFee - revenueFee;
+        uint256 jackpotFee = (amount * buyFees.jackpot) / dragon.BASIS_POINTS();
+        uint256 revenueFee = (amount * buyFees.veDRAGON) / dragon.BASIS_POINTS();
+        uint256 burnFee = (amount * buyFees.burn) / dragon.BASIS_POINTS();
+        
+        // Total fee should equal sum of individual fees (allowing for rounding)
+        assertTrue(jackpotFee + revenueFee + burnFee <= totalFee + 2); // Allow 2 wei rounding error
         
         // Fees should never exceed the original amount
-        assertTrue(jackpotFee + revenueFee + burnFee <= amount);
+        assertTrue(totalFee <= amount);
         
-        // Individual fees should be reasonable
-        assertTrue(jackpotFee <= (amount * 690) / dragon.BASIS_POINTS());
-        assertTrue(revenueFee <= (amount * 241) / dragon.BASIS_POINTS());
-        assertTrue(burnFee <= (amount * 69) / dragon.BASIS_POINTS());
+        // Individual fees should match expected calculations exactly
+        assertEq(jackpotFee, (amount * 690) / dragon.BASIS_POINTS());
+        assertEq(revenueFee, (amount * 241) / dragon.BASIS_POINTS());
+        assertEq(burnFee, (amount * 69) / dragon.BASIS_POINTS());
     }
 }
