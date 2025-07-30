@@ -1,0 +1,33 @@
+[profile.default]
+src = "contracts"
+out = "out"
+libs = ["lib"]
+test = "test"
+cache_path = "cache_forge"
+
+# Solidity version
+solc_version = "0.8.20"
+
+# Optimizer settings
+optimizer = true
+optimizer_runs = 200
+
+# Gas reporting
+gas_reports = ["*"]
+
+# Verbosity for tests
+verbosity = 3
+
+# Remappings for dependencies
+remappings = [
+    "@openzeppelin/=lib/openzeppelin-contracts/",
+    "@chainlink/=lib/chainlink/",
+    "@layerzerolabs/=lib/oft-evm/",
+    "forge-std/=lib/forge-std/src/",
+]
+
+# RPC settings for forking/testing
+[rpc_endpoints]
+sonic = "https://rpc.soniclabs.com"
+arbitrum = "https://arb1.arbitrum.io/rpc"
+avalanche = "https://api.avax.network/ext/bc/C/rpc"

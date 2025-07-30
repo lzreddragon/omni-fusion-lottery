@@ -1,0 +1,28 @@
+{
+  "name": "red-dragon-ethglobal",
+  "version": "1.0.0",
+  "description": "State Channels Exchange Hub with lottery-powered incentives",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "forge test -vvv",
+    "test:registry": "forge test --match-contract OmniDragonRegistryTest -vvv",
+    "deploy": "hardhat run scripts/deploy.js",
+    "node": "hardhat node"
+  },
+  "dependencies": {
+    "@chainlink/contracts": "^1.4.0",
+    "@openzeppelin/contracts": "^5.4.0", 
+    "@layerzerolabs/oft-evm": "^0.3.2",
+    "@1inch/cross-chain-sdk": "latest",
+    "ethers": "^6.0.0"
+  },
+  "devDependencies": {
+    "hardhat": "^2.26.1",
+    "@nomicfoundation/hardhat-toolbox": "^6.1.0",
+    "forge-std": "github:foundry-rs/forge-std@v1.8.2"
+  },
+  "keywords": ["ethereum", "defi", "lottery", "state-channels", "layerzero", "1inch"],
+  "author": "lzreddragon",
+  "license": "MIT"
+}

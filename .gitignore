@@ -1,0 +1,26 @@
+# Environment and sensitive files
+.env
+
+README.md
+
+# Build artifacts
+out/
+cache_forge/
+cache/
+broadcast/
+
+# Dependencies (managed by Foundry)
+lib/
+
+# IDE and OS files
+.vscode/
+.DS_Store
+*.swp
+*.swo
+
+# Node modules (if we add any)
+node_modules/
+
+# Coverage reports
+coverage/
+lcov.info
