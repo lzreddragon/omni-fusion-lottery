@@ -16,6 +16,10 @@ echo "✅ Python found: $(python3 --version)"
 
 # Install Python dependencies
 echo "📦 Installing Python dependencies..."
+# Activate virtual environment if we're not already in it
+if [[ "$VIRTUAL_ENV" == "" ]]; then
+    source ../bin/activate
+fi
 pip install -r requirements-dragon-mcp.txt
 
 if [ $? -eq 0 ]; then
