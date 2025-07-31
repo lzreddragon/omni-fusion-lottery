@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "dragon": {
+      "type": "http",
+      "url": "https://mcp.sonicreddragon.io/dragon",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY_HERE",
+        "X-Chain-Access": "sonic,ethereum,arbitrum,base"
+      }
+    }
+  }
+}

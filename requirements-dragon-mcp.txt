@@ -1,0 +1,18 @@
+# Dragon MCP Dependencies
+# Install with: pip install -r requirements-dragon-mcp.txt
+
+# Core MCP framework
+mcp[cli]>=1.0.0
+
+# Web3 and Ethereum interaction
+web3>=6.15.0
+eth-account>=0.10.0
+
+# HTTP client for API calls  
+httpx>=0.25.0
+
+# Optional: Environment variable management
+python-dotenv>=1.0.0
+
+# Optional: Enhanced async support
+aiofiles>=23.0.0
