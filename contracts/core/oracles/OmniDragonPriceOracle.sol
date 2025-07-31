@@ -22,10 +22,10 @@ interface IStdReference {
   function getReferenceData(string memory _base, string memory _quote) external view returns (ReferenceData memory);
 }
 
-import "../../interfaces/external/api3/IApi3ReaderProxy.sol";
-import "../../interfaces/external/pyth/IPyth.sol";
-import "../../interfaces/external/pyth/PythStructs.sol";
-import "../../interfaces/external/uniswap/IUniswapV2Pair.sol";
+import "../../interfaces/oracles/IApi3ReaderProxy.sol";
+import "../../interfaces/oracles/IPyth.sol";
+import "../../interfaces/oracles/PythStructs.sol";
+import "../../interfaces/tokens/IUniswapV2Pair.sol";
 import "../../interfaces/config/IOmniDragonRegistry.sol";
 
 /**

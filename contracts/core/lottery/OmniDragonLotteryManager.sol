@@ -7,8 +7,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
-import {IChainlinkVRFIntegratorV2_5} from "../../interfaces/external/chainlink/IChainlinkVRFIntegratorV2_5.sol";
-import {IOmniDragonVRFConsumerV2_5} from "../../interfaces/external/chainlink/IOmniDragonVRFConsumerV2_5.sol";
+import {IChainlinkVRFIntegratorV2_5} from "../../interfaces/vrf/IChainlinkVRFIntegratorV2_5.sol";
+import {IOmniDragonVRFConsumerV2_5} from "../../interfaces/vrf/IOmniDragonVRFConsumerV2_5.sol";
 import {MessagingReceipt} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
 import {MessagingFee} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
 import {IDragonJackpotDistributor} from "../../interfaces/lottery/IDragonJackpotDistributor.sol";

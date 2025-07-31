@@ -26,6 +26,7 @@ remappings = [
     "@layerzerolabs/lz-evm-protocol-v2/=lib/LayerZero-v2/packages/layerzero-v2/evm/protocol/",
     "@layerzerolabs/lz-evm-messagelib-v2/=lib/LayerZero-v2/packages/layerzero-v2/evm/messagelib/",
     "solidity-bytes-utils/=lib/solidity-bytes-utils/",
+    "solmate/=lib/solmate/src/",
     "forge-std/=lib/forge-std/src/",
 ]
 
